@@ -4,11 +4,13 @@ import { prisma } from "@/lib/prisma"
 // 게시글 조회
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
+    const { id } = params
     const post = await prisma.post.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         author: {
           select: {
@@ -40,13 +42,15 @@ export async function GET(
 // 게시글 수정
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
+    const { id } = params
     const { title, content } = await request.json()
 
     const post = await prisma.post.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title,
         content,
@@ -75,11 +79,13 @@ export async function PUT(
 // 게시글 삭제
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
+    const { id } = params
     await prisma.post.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: "Post deleted successfully" })

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { useAuthStore, isAdmin } from "@/lib/auth"
+import { use } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,8 +25,8 @@ interface Post {
   }
 }
 
-export default function EditPage({ params }: { params: { id: string } }) {
-  const { id } = params
+export default function EditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const { user } = useAuthStore()
   const router = useRouter()
 

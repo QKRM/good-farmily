@@ -12,6 +12,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/components/ui/use-toast"
 
 interface Post {
   id: string
@@ -35,13 +36,19 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
   const [content, setContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!user) {
+      router.push("/login")
+      return
+    }
     fetchPost()
-  }, [id])
+  }, [id, user])
 
   const fetchPost = async () => {
     try {
+      setError(null)
       const response = await fetch(`/api/posts/${id}`)
       const data = await response.json()
 
@@ -50,10 +57,22 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
         setTitle(data.title)
         setContent(data.content)
       } else {
+        setError(data.error || "Failed to fetch post")
+        toast({
+          title: "Error",
+          description: data.error || "Failed to fetch post",
+          variant: "destructive",
+        })
         router.push("/")
       }
     } catch (error) {
       console.error("Error fetching post:", error)
+      setError("An unexpected error occurred")
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
       router.push("/")
     } finally {
       setIsLoading(false)
@@ -61,14 +80,33 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
   }
 
   // Redirect if not authorized
-  if (!isLoading && (!user || (!isAdmin(user) && user.id !== post?.author.id))) {
-    router.push("/")
-    return null
-  }
+  useEffect(() => {
+    if (!isLoading && (!user || (!isAdmin(user) && user.id !== post?.author.id))) {
+      toast({
+        title: "Access Denied",
+        description: "You are not authorized to edit this post",
+        variant: "destructive",
+      })
+      router.push("/")
+    }
+  }, [isLoading, user, post])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError(null)
+
+    // 입력값 검증
+    if (!title.trim() || !content.trim()) {
+      setError("Title and content are required")
+      toast({
+        title: "Validation Error",
+        description: "Title and content are required",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       const response = await fetch(`/api/posts/${id}`, {
@@ -77,25 +115,66 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title,
-          content,
+          title: title.trim(),
+          content: content.trim(),
         }),
       })
 
+      const data = await response.json()
+
       if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Post updated successfully",
+        })
         router.push(`/categories/${post?.category}`)
       } else {
-        console.error("Failed to update post")
+        setError(data.error || "Failed to update post")
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update post",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error updating post:", error)
+      setError("An unexpected error occurred")
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center text-destructive">
+          <p>{error}</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => router.push("/")}
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -128,6 +207,7 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
+                    maxLength={200}
                   />
                 </div>
 
@@ -139,6 +219,7 @@ export default function EditPage({ params }: { params: Promise<{ id: string }> }
                     onChange={(e) => setContent(e.target.value)}
                     required
                     className="min-h-[200px]"
+                    maxLength={5000}
                   />
                 </div>
               </CardContent>

@@ -7,12 +7,10 @@ import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 
 // User types
-export type UserRole = "user" | "admin"
-
 export interface User {
   id: string
   username: string
-  role: UserRole
+  role: string
 }
 
 // Mock user database
@@ -21,13 +19,13 @@ export const USERS = [
     id: "1",
     username: "admin",
     password: "admin123", // In a real app, passwords would be hashed
-    role: "admin" as UserRole,
+    role: "admin" as string,
   },
   {
     id: "2",
     username: "user",
     password: "user123",
-    role: "user" as UserRole,
+    role: "user" as string,
   },
 ]
 
@@ -81,7 +79,5 @@ export const useAuthStore = create<AuthState>()(
 )
 
 // Helper function to check if user is admin
-export function isAdmin(user: User | null): boolean {
-  return user?.role === "admin"
-}
+export const isAdmin = (user: User | null) => user?.role === "admin"
 
